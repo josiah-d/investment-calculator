@@ -20,7 +20,7 @@
   --accent:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;
   --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
 }
-body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;min-height:100vh;overflow-x:hidden;width:100%}
 .app{max-width:1120px;margin:0 auto;padding:40px 24px;padding-top:max(40px,env(safe-area-inset-top));padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right));padding-bottom:max(40px,env(safe-area-inset-bottom))}
 header{margin-bottom:36px}
 .hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:5px}
@@ -119,6 +119,8 @@ td.ac{color:var(--amber)}
   .stats,.fee-band.on{grid-template-columns:1fr 1fr}
   .stats .stat:last-child,.fee-band .stat:last-child{border-right:none;border-top:1px solid var(--border)}
   .r2{grid-template-columns:1fr}
+  .panel{min-width:0}
+  .exp-labels,.exp-row{grid-template-columns:1fr 55px 70px 28px}
 }
 /* ── print ─────────────────────────────────────────────── */
 @media print{
