@@ -81,7 +81,7 @@ input.pl{padding-left:23px}input.pr{padding-right:28px}
 .sl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
 .sv{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--text)}
 .fee-band{display:none;border-bottom:1px solid var(--border);background:rgba(245,158,11,.03)}
-.fee-band.on{display:grid;grid-template-columns:1fr 1fr 1fr}
+.fee-band.on{display:grid;grid-template-columns:1fr 1fr 1fr 1fr}
 .fee-band .stat{border-right:1px solid var(--border)}
 .fee-band .stat:last-child{border-right:none}
 .cw{padding:20px;height:260px}
@@ -116,8 +116,11 @@ td.ac{color:var(--amber)}
   .hdr-top{flex-wrap:wrap;gap:10px}
   .toolbar{flex-wrap:wrap}
   .hv{font-size:28px}
-  .stats,.fee-band.on{grid-template-columns:1fr 1fr}
-  .stats .stat:last-child,.fee-band .stat:last-child{border-right:none;border-top:1px solid var(--border)}
+  .stats{grid-template-columns:1fr 1fr}
+  .stats .stat:last-child{border-right:none;border-top:1px solid var(--border)}
+  .fee-band.on{grid-template-columns:1fr 1fr}
+  .fee-band .stat:nth-child(2n){border-right:none}
+  .fee-band .stat:nth-child(n+3){border-top:1px solid var(--border)}
   .r2{grid-template-columns:1fr}
   .panel{min-width:0;max-width:100%}
   .exp-labels,.exp-row{grid-template-columns:1fr 55px 70px 28px}
@@ -287,6 +290,7 @@ td.ac{color:var(--amber)}
           <div class="stat"><div class="sl">Balance After Fees</div><div class="sv" id="stFeeBalance" style="color:var(--amber)">--</div></div>
           <div class="stat"><div class="sl">AUM Fees Paid</div><div class="sv" id="stFees" style="color:var(--red)">--</div></div>
           <div class="stat"><div class="sl">Total Drag</div><div class="sv" id="stDrag">--</div></div>
+          <div class="stat"><div class="sl">Offset Needed</div><div class="sv" id="stOffset" style="color:var(--accent)">--</div></div>
         </div>
         <div class="cw"><canvas id="chart"></canvas></div>
       </div>
@@ -402,6 +406,41 @@ function calcBlendedExpense() {
   return expenseItems.reduce((s, e) => s + (e.alloc || 0) * (e.expense || 0), 0) / total;
 }
 
+// Run fee simulation with an extra flat monthly contribution — used by binary search
+function simulateFeeBalance(extraMonthly, schedule, initBal, monthlyNetRet, contribPct) {
+  let bal = initBal;
+  for (const { income } of schedule) {
+    const monthly = (income * contribPct / 100) / 12 + extraMonthly;
+    if (feesEnabled && billingFreq === 'monthly') {
+      for (let m = 0; m < 12; m++) {
+        const mFee = bal > 0 ? calcAnnualFee(bal, feeTiers) / 12 : 0;
+        bal -= mFee;
+        bal  = bal * (1 + monthlyNetRet) + monthly;
+      }
+    } else if (feesEnabled && billingFreq === 'quarterly') {
+      for (let q = 0; q < 4; q++) {
+        const qFee = bal > 0 ? calcAnnualFee(bal, feeTiers) / 4 : 0;
+        bal -= qFee;
+        for (let m = 0; m < 3; m++) bal = bal * (1 + monthlyNetRet) + monthly;
+      }
+    } else {
+      for (let m = 0; m < 12; m++) bal = bal * (1 + monthlyNetRet) + monthly;
+      if (feesEnabled && bal > 0) bal -= calcAnnualFee(bal, feeTiers);
+    }
+  }
+  return bal;
+}
+
+function solveOffsetMonthly(target, schedule, initBal, monthlyNetRet, contribPct) {
+  let lo = 0, hi = 50000;
+  for (let i = 0; i < 52; i++) {
+    const mid = (lo + hi) / 2;
+    simulateFeeBalance(mid, schedule, initBal, monthlyNetRet, contribPct) < target
+      ? (lo = mid) : (hi = mid);
+  }
+  return (lo + hi) / 2;
+}
+
 function buildIncomeSchedule(startAge, retAge, startIncome, growthPct, ovs) {
   const sorted = [...ovs].sort((a,b) => a.age - b.age);
   const rows = [];
@@ -501,9 +540,11 @@ function calculate() {
   const feeBand = g('feeBand');
   if (anyFeeEnabled) {
     feeBand.classList.add('on');
+    const offsetMonthly = solveOffsetMonthly(balance, schedule, initBal, monthlyNetRet, contribPct);
     g('stFeeBalance').textContent = fmt(feeBalance);
     g('stFees').textContent       = feesEnabled ? fmt(totalFees) : '--';
     g('stDrag').textContent       = fmt(balance - feeBalance);
+    g('stOffset').textContent     = fmt(offsetMonthly) + '/mo';
   } else {
     feeBand.classList.remove('on');
   }
