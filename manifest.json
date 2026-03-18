@@ -1,6 +1,6 @@
 {
   "name": "Investment Calculator",
-  "short_name": "Inv. Calc",
+  "short_name": "investment-calculator",
   "description": "Investment projection with income growth, salary overrides, and fee drag modeling.",
   "start_url": "./",
   "display": "standalone",
