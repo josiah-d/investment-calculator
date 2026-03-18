@@ -1,5 +1,4 @@
 const CACHE = 'inv-calc-v1';
-const LOCAL = ['./', './index.html', './icon.svg', './icon-192.png', './icon-512.png', './manifest.json'];
 const CDN   = [
   'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
@@ -8,7 +7,6 @@ const CDN   = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(cache => {
-      cache.addAll(LOCAL);
       CDN.forEach(url => cache.add(url).catch(() => {}));
     })
   );
@@ -24,9 +22,25 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// Cache-first: serve from cache, fall back to network
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
+  const url = new URL(e.request.url);
+  const isLocal = url.origin === self.location.origin;
+
+  if (isLocal) {
+    // Network-first for app files — always get fresh HTML/assets when online
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+  } else {
+    // Cache-first for CDN — fonts and Chart.js don't change
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request))
+    );
+  }
 });
