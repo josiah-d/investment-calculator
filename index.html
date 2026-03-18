@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Inv. Calc">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Investment Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f12;--surface:#13161b;--surface2:#1a1e25;--border:#252a33;--border2:#2e3542;
+  --text:#e8eaf0;--text2:#8b93a5;--text3:#4e5666;
+  --accent:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;min-height:100vh}
+.app{max-width:1120px;margin:0 auto;padding:40px 24px;padding-top:max(40px,env(safe-area-inset-top));padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right));padding-bottom:max(40px,env(safe-area-inset-bottom))}
+header{margin-bottom:36px}
+.hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:5px}
+header h1{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-0.5px}
+header p{color:var(--text3);font-size:12px}
+.toolbar{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.tbtn{font-family:var(--mono);font-size:10px;letter-spacing:0.5px;text-transform:uppercase;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;line-height:1}
+.tbtn:hover{border-color:var(--border2);color:var(--text2)}
+.tbtn.primary{border-color:var(--border2);color:var(--text2)}
+.saved-ind{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:40px;text-align:right}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.panel:last-child{margin-bottom:0}
+.ph{padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);background:var(--surface2);display:flex;align-items:center;justify-content:space-between}
+.pb{padding:16px}
+.field{margin-bottom:14px}.field:last-child{margin-bottom:0}
+label{display:block;font-size:10px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;color:var(--text2);margin-bottom:5px}
+.iw{position:relative}
+.pfx,.sfx{position:absolute;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:13px;color:var(--text3);pointer-events:none}
+.pfx{left:10px}.sfx{right:10px}
+input[type=number],input[type=text]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 11px;outline:none;transition:border-color .15s}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+input[type=number]:focus,input[type=text]:focus{border-color:var(--accent)}
+input::placeholder{color:var(--text3)}
+input.pl{padding-left:23px}input.pr{padding-right:28px}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.derived{display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:8px 11px;font-family:var(--mono);font-size:13px;color:var(--green);min-height:36px;gap:6px}
+.dtag{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-left:auto}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.ov-labels{display:grid;gap:8px;margin-bottom:5px}
+.ov-labels span{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3)}
+.ovr-labels{grid-template-columns:1fr 1fr 28px}
+.tier-labels{grid-template-columns:1fr 90px 28px}
+.exp-labels{grid-template-columns:1.5fr 60px 75px 28px}
+.ovr{display:grid;grid-template-columns:1fr 1fr 28px;gap:8px;align-items:center;margin-bottom:8px}
+.tier-row{display:grid;grid-template-columns:1fr 90px 28px;gap:8px;align-items:center;margin-bottom:8px}
+.exp-row{display:grid;grid-template-columns:1.5fr 60px 75px 28px;gap:8px;align-items:center;margin-bottom:8px}
+.tier-fixed{font-family:var(--mono);font-size:12px;color:var(--text3);padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brm{width:28px;height:28px;border:1px solid var(--border2);border-radius:4px;background:var(--surface2);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;transition:all .15s;flex-shrink:0}
+.brm:hover{border-color:var(--red);color:var(--red)}
+.brm:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+.badd{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent);background:none;border:1px dashed var(--border2);border-radius:5px;padding:8px 12px;cursor:pointer;width:100%;transition:all .15s}
+.badd:hover{border-color:var(--accent);background:rgba(59,130,246,.05)}
+/* segmented control */
+.seg{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.seg input[type=radio]{display:none}
+.seg label{flex:1;padding:7px 0;text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:0.5px;text-transform:uppercase;color:var(--text3);cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.seg label:last-child{border-right:none}
+.seg input[type=radio]:checked+label{background:var(--border2);color:var(--text)}
+/* results */
+.hero{padding:22px 20px;text-align:center;border-bottom:1px solid var(--border)}
+.hl{font-family:var(--mono);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.hv{font-family:var(--mono);font-size:38px;font-weight:600;color:var(--green);letter-spacing:-1.5px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border)}
+.stat{padding:14px 16px;border-right:1px solid var(--border)}
+.stat:last-child{border-right:none}
+.sl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
+.sv{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--text)}
+.fee-band{display:none;border-bottom:1px solid var(--border);background:rgba(245,158,11,.03)}
+.fee-band.on{display:grid;grid-template-columns:1fr 1fr 1fr}
+.fee-band .stat{border-right:1px solid var(--border)}
+.fee-band .stat:last-child{border-right:none}
+.cw{padding:20px;height:260px}
+.tw{max-height:300px;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tw::-webkit-scrollbar{width:4px}
+.tw::-webkit-scrollbar-track{background:var(--surface)}
+.tw::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+table{width:100%;border-collapse:collapse}
+thead th{position:sticky;top:0;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;letter-spacing:0.8px;text-transform:uppercase;color:var(--text3);padding:9px 13px;text-align:right;font-weight:500}
+thead th:first-child{text-align:left}
+tbody tr:hover{background:var(--surface2)}
+tbody tr.ovh td{color:var(--amber)!important}
+td{padding:7px 13px;font-family:var(--mono);font-size:11px;text-align:right;border-bottom:1px solid rgba(37,42,51,.5);color:var(--text2)}
+td:first-child{text-align:left;color:var(--text3)}
+td.mc{color:var(--text)}
+td.fc{color:var(--red)}
+td.ac{color:var(--amber)}
+.badge{display:inline-block;font-size:9px;padding:1px 4px;border-radius:3px;background:rgba(245,158,11,.15);color:var(--amber);letter-spacing:0.5px;text-transform:uppercase;margin-left:4px;vertical-align:middle}
+/* toggle */
+.tog-wrap{display:flex;align-items:center;gap:8px}
+.tog{position:relative;display:inline-block;width:34px;height:18px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog-sl{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--border2);border-radius:18px;transition:.15s}
+.tog-sl:before{position:absolute;content:"";height:12px;width:12px;left:3px;bottom:3px;background:var(--text3);border-radius:50%;transition:.15s}
+.tog input:checked+.tog-sl{background:var(--accent)}
+.tog input:checked+.tog-sl:before{transform:translateX(16px);background:#fff}
+.tog-lbl{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:0.8px;text-transform:uppercase;cursor:pointer;user-select:none}
+/* print summary — hidden on screen */
+.print-only{display:none}
+@media(max-width:800px){
+  .layout{grid-template-columns:1fr}
+  .hdr-top{flex-wrap:wrap;gap:10px}
+  .toolbar{flex-wrap:wrap}
+  .hv{font-size:28px}
+  .stats,.fee-band.on{grid-template-columns:1fr 1fr}
+  .stats .stat:last-child,.fee-band .stat:last-child{border-right:none;border-top:1px solid var(--border)}
+  .r2{grid-template-columns:1fr}
+}
+/* ── print ─────────────────────────────────────────────── */
+@media print{
+  :root{
+    --bg:#fff;--surface:#fff;--surface2:#f5f5f5;--border:#ddd;--border2:#ccc;
+    --text:#111;--text2:#444;--text3:#777;
+    --green:#15803d;--amber:#b45309;--red:#b91c1c;--accent:#1d4ed8;
+  }
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .app{padding:16px;max-width:100%}
+  .toolbar,.layout>div:first-child{display:none!important}
+  .layout{grid-template-columns:1fr!important}
+  .print-only{display:block!important;margin-bottom:16px}
+  .print-params{font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.8;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px}
+  .print-params strong{color:var(--text);font-weight:600}
+  .tw{max-height:none;overflow:visible}
+  .cw{height:220px}
+  thead th{position:static}
+  @page{margin:1.5cm}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="hdr-top">
+      <h1>investment_calculator</h1>
+      <div class="toolbar">
+        <span class="saved-ind" id="savedInd"></span>
+        <button class="tbtn" onclick="copyShareLink()">Share</button>
+        <button class="tbtn primary" onclick="window.print()">Print / PDF</button>
+      </div>
+    </div>
+    <p>Monthly investment = (income &times; contribution%) &divide; 12 &nbsp;&middot;&nbsp; Income compounds annually &nbsp;&middot;&nbsp; Overrides anchor a new salary at a given age, growth resumes from there</p>
+  </header>
+
+  <!-- print-only parameters summary, populated by JS -->
+  <div class="print-only"><div class="print-params" id="printParams"></div></div>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <div class="ph">Parameters</div>
+        <div class="pb">
+          <div class="r2">
+            <div class="field">
+              <label>Current Age</label>
+              <div class="iw"><input type="number" id="currentAge" value="30" min="1" max="99"></div>
+            </div>
+            <div class="field">
+              <label>Retirement Age</label>
+              <div class="iw"><input type="number" id="retirementAge" value="65" min="2" max="100"></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Current Annual Income</label>
+            <div class="iw"><span class="pfx">$</span><input type="number" id="currentIncome" class="pl" value="75000" min="0" step="1000"></div>
+          </div>
+          <div class="field">
+            <label>Annual Income Growth</label>
+            <div class="iw"><input type="number" id="incomeGrowth" class="pr" value="3" min="0" max="50" step="0.1"><span class="sfx">%</span></div>
+          </div>
+          <div class="r2">
+            <div class="field">
+              <label>Contribution Rate</label>
+              <div class="iw"><input type="number" id="contribRate" class="pr" value="15" min="0" max="100" step="0.5"><span class="sfx">%</span></div>
+            </div>
+            <div class="field">
+              <label>Monthly (calc)</label>
+              <div class="derived"><span id="monthlyVal">--</span><span class="dtag">auto</span></div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="r2">
+            <div class="field">
+              <label>Initial Balance</label>
+              <div class="iw"><span class="pfx">$</span><input type="number" id="initialBalance" class="pl" value="10000" min="0" step="500"></div>
+            </div>
+            <div class="field">
+              <label>Expected Return</label>
+              <div class="iw"><input type="number" id="returnRate" class="pr" value="10" min="0" max="50" step="0.1"><span class="sfx">%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">Salary Overrides</div>
+        <div class="pb">
+          <p style="font-size:11px;color:var(--text3);margin-bottom:12px">Pin a salary at a specific age. Growth rate resumes from that anchor.</p>
+          <div class="ov-labels ovr-labels"><span>Age</span><span>Annual Salary</span><span></span></div>
+          <div id="ovList"></div>
+          <button class="badd" id="addOv">+ &nbsp;Add override</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">
+          <span>AUM Advisory Fee</span>
+          <label class="tog-wrap" for="feeToggle">
+            <span class="tog-lbl">Enable</span>
+            <span class="tog"><input type="checkbox" id="feeToggle"><span class="tog-sl"></span></span>
+          </label>
+        </div>
+        <div id="feeBody" style="display:none">
+          <div class="pb">
+            <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Marginal tiers applied to balance — like income tax, each dollar sits in its bracket.</p>
+            <div style="margin-bottom:14px">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:6px">Billing Frequency</div>
+              <div class="seg">
+                <input type="radio" name="billingFreq" id="bfQ" value="quarterly" checked>
+                <label for="bfQ">Quarterly</label>
+                <input type="radio" name="billingFreq" id="bfM" value="monthly">
+                <label for="bfM">Monthly</label>
+                <input type="radio" name="billingFreq" id="bfA" value="annually">
+                <label for="bfA">Annually</label>
+              </div>
+            </div>
+            <div class="ov-labels tier-labels"><span>Up To</span><span>Rate</span><span></span></div>
+            <div id="tierList"></div>
+            <button class="badd" id="addTier">+ &nbsp;Add tier</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">
+          <span>Fund Expense Ratios</span>
+          <label class="tog-wrap" for="expToggle">
+            <span class="tog-lbl">Enable</span>
+            <span class="tog"><input type="checkbox" id="expToggle"><span class="tog-sl"></span></span>
+          </label>
+        </div>
+        <div id="expBody" style="display:none">
+          <div class="pb">
+            <p style="font-size:11px;color:var(--text3);margin-bottom:12px">Embedded fund costs reduce your effective return rate. Applied continuously to the adjusted balance.</p>
+            <div class="ov-labels exp-labels"><span>Fund</span><span>Alloc</span><span>Exp. Ratio</span><span></span></div>
+            <div id="expList"></div>
+            <button class="badd" id="addExp">+ &nbsp;Add fund</button>
+            <div class="divider"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Blended Rate</span>
+              <div class="derived" style="flex:0 0 auto"><span id="blendedExpVal">--</span><span class="dtag">% / yr</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="hero">
+          <div class="hl" id="heroLabel">Projected Retirement Balance</div>
+          <div class="hv" id="heroVal">$0</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="sl">Total Contributed</div><div class="sv" id="stContrib">--</div></div>
+          <div class="stat"><div class="sl">Interest Earned</div><div class="sv" id="stInterest">--</div></div>
+          <div class="stat"><div class="sl">Years Invested</div><div class="sv" id="stYears">--</div></div>
+        </div>
+        <div class="fee-band" id="feeBand">
+          <div class="stat"><div class="sl">Balance After Fees</div><div class="sv" id="stFeeBalance" style="color:var(--amber)">--</div></div>
+          <div class="stat"><div class="sl">AUM Fees Paid</div><div class="sv" id="stFees" style="color:var(--red)">--</div></div>
+          <div class="stat"><div class="sl">Total Drag</div><div class="sv" id="stDrag">--</div></div>
+        </div>
+        <div class="cw"><canvas id="chart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="ph">Year-by-Year Schedule</div>
+        <div class="tw">
+          <table>
+            <thead><tr id="schedHead"></tr></thead>
+            <tbody id="sched"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const g = id => document.getElementById(id);
+let chartInst = null;
+let overrides = [];
+let feesEnabled    = false;
+let expenseEnabled = false;
+let billingFreq    = 'quarterly';
+let feeTiers = [
+  { upTo: 100000,   rate: 1.95 },
+  { upTo: 250000,   rate: 1.25 },
+  { upTo: 1000000,  rate: 1.00 },
+  { upTo: 2500000,  rate: 0.85 },
+  { upTo: 10000000, rate: 0.65 },
+  { upTo: null,     rate: 0.50 },
+];
+let expenseItems = [
+  { name: '', alloc: 100, expense: 0.75 }
+];
+
+const fmt    = n => '$' + Math.round(n).toLocaleString('en-US');
+const fmtPct = n => n.toFixed(2) + '%';
+
+// ── state ────────────────────────────────────────────────
+function captureState() {
+  return {
+    v: 1,
+    inputs: {
+      currentAge:    g('currentAge').value,
+      retirementAge: g('retirementAge').value,
+      currentIncome: g('currentIncome').value,
+      incomeGrowth:  g('incomeGrowth').value,
+      contribRate:   g('contribRate').value,
+      initialBalance:g('initialBalance').value,
+      returnRate:    g('returnRate').value,
+    },
+    overrides, feesEnabled, billingFreq, feeTiers, expenseEnabled, expenseItems,
+  };
+}
+
+function applyState(s) {
+  if (!s || s.v !== 1) return;
+  for (const [k, v] of Object.entries(s.inputs || {})) {
+    const el = g(k);
+    if (el) el.value = v;
+  }
+  if (s.overrides)    overrides    = s.overrides;
+  if (s.feeTiers)     feeTiers     = s.feeTiers;
+  if (s.expenseItems) expenseItems = s.expenseItems;
+  if (s.feesEnabled != null) {
+    feesEnabled = s.feesEnabled;
+    g('feeToggle').checked = feesEnabled;
+    g('feeBody').style.display = feesEnabled ? 'block' : 'none';
+  }
+  if (s.expenseEnabled != null) {
+    expenseEnabled = s.expenseEnabled;
+    g('expToggle').checked = expenseEnabled;
+    g('expBody').style.display = expenseEnabled ? 'block' : 'none';
+  }
+  if (s.billingFreq) {
+    billingFreq = s.billingFreq;
+    const r = document.querySelector(`input[name=billingFreq][value="${s.billingFreq}"]`);
+    if (r) r.checked = true;
+  }
+}
+
+function saveToLocal() {
+  try { localStorage.setItem('investCalc_v1', JSON.stringify(captureState())); } catch(e) {}
+  const ind = g('savedInd');
+  ind.textContent = 'saved';
+  clearTimeout(ind._t);
+  ind._t = setTimeout(() => { ind.textContent = ''; }, 1800);
+}
+
+function loadFromLocal() {
+  try {
+    const raw = localStorage.getItem('investCalc_v1');
+    if (raw) applyState(JSON.parse(raw));
+  } catch(e) {}
+}
+
+
+// ── math ─────────────────────────────────────────────────
+function calcAnnualFee(balance, tiers) {
+  let fee = 0, floor = 0;
+  for (const tier of tiers) {
+    if (balance <= floor) break;
+    const ceiling = tier.upTo === null ? balance : Math.min(balance, tier.upTo);
+    fee += (ceiling - floor) * tier.rate / 100;
+    if (tier.upTo === null || balance <= tier.upTo) break;
+    floor = tier.upTo;
+  }
+  return fee;
+}
+
+function calcBlendedExpense() {
+  const total = expenseItems.reduce((s, e) => s + (e.alloc || 0), 0);
+  if (!total) return 0;
+  return expenseItems.reduce((s, e) => s + (e.alloc || 0) * (e.expense || 0), 0) / total;
+}
+
+function buildIncomeSchedule(startAge, retAge, startIncome, growthPct, ovs) {
+  const sorted = [...ovs].sort((a,b) => a.age - b.age);
+  const rows = [];
+  let income = startIncome;
+  for (let age = startAge; age < retAge; age++) {
+    const ov = sorted.find(o => o.age === age);
+    if (ov) income = ov.salary;
+    rows.push({ age, income });
+    const nextOv = sorted.find(o => o.age === age + 1);
+    if (!nextOv) income = income * (1 + growthPct / 100);
+  }
+  return rows;
+}
+
+function calculate() {
+  const currentAge   = parseInt(g('currentAge').value)     || 30;
+  const retAge       = parseInt(g('retirementAge').value)   || 65;
+  const startIncome  = parseFloat(g('currentIncome').value) || 0;
+  const growthPct    = parseFloat(g('incomeGrowth').value)  || 0;
+  const contribPct   = parseFloat(g('contribRate').value)   || 0;
+  const initBal      = parseFloat(g('initialBalance').value)|| 0;
+  const returnPct    = parseFloat(g('returnRate').value)    || 0;
+
+  if (retAge <= currentAge) return;
+
+  const anyFeeEnabled = feesEnabled || expenseEnabled;
+
+  g('monthlyVal').textContent = fmt((startIncome * contribPct / 100) / 12);
+
+  const blendedExpense = expenseEnabled ? calcBlendedExpense() : 0;
+  if (expenseEnabled) g('blendedExpVal').textContent = blendedExpense.toFixed(3);
+
+  const schedule      = buildIncomeSchedule(currentAge, retAge, startIncome, growthPct, overrides);
+  const monthlyRet    = returnPct / 100 / 12;
+  const monthlyNetRet = (returnPct - blendedExpense) / 100 / 12;
+  const ovAges        = new Set(overrides.map(o => o.age));
+
+  let balance = initBal, totalContrib = 0;
+  let feeBalance = initBal, totalFees = 0;
+  const rows = [], labels = [], balData = [], contribData = [], feeBalData = [];
+
+  for (const { age, income } of schedule) {
+    const monthly = (income * contribPct / 100) / 12;
+    let yrContrib = 0, annualFee = 0;
+
+    if (feesEnabled && billingFreq === 'monthly') {
+      for (let m = 0; m < 12; m++) {
+        balance = balance * (1 + monthlyRet) + monthly;
+        const mFee = feeBalance > 0 ? calcAnnualFee(feeBalance, feeTiers) / 12 : 0;
+        feeBalance -= mFee;
+        annualFee  += mFee;
+        feeBalance  = feeBalance * (1 + monthlyNetRet) + monthly;
+        yrContrib  += monthly;
+      }
+    } else if (feesEnabled && billingFreq === 'quarterly') {
+      for (let q = 0; q < 4; q++) {
+        const qFee = feeBalance > 0 ? calcAnnualFee(feeBalance, feeTiers) / 4 : 0;
+        feeBalance -= qFee;
+        annualFee  += qFee;
+        for (let m = 0; m < 3; m++) {
+          balance    = balance    * (1 + monthlyRet)    + monthly;
+          feeBalance = feeBalance * (1 + monthlyNetRet) + monthly;
+          yrContrib += monthly;
+        }
+      }
+    } else {
+      for (let m = 0; m < 12; m++) {
+        balance    = balance    * (1 + monthlyRet)    + monthly;
+        feeBalance = feeBalance * (1 + monthlyNetRet) + monthly;
+        yrContrib += monthly;
+      }
+      if (feesEnabled && feeBalance > 0) {
+        annualFee  = calcAnnualFee(feeBalance, feeTiers);
+        feeBalance -= annualFee;
+      }
+    }
+
+    totalContrib += yrContrib;
+    totalFees    += annualFee;
+    const preFee        = feeBalance + annualFee;
+    const effectiveRate = preFee > 0 ? annualFee / preFee * 100 : 0;
+
+    rows.push({ age, income, monthly, yrContrib, balance, feeBalance, annualFee, effectiveRate, isOv: ovAges.has(age) });
+    labels.push(age);
+    balData.push(Math.round(balance));
+    feeBalData.push(Math.round(feeBalance));
+    contribData.push(Math.round(totalContrib + initBal));
+  }
+
+  const interest = balance - totalContrib - initBal;
+  g('heroLabel').textContent  = anyFeeEnabled ? 'Projected Balance (Gross)' : 'Projected Retirement Balance';
+  g('heroVal').textContent    = fmt(balance);
+  g('stContrib').textContent  = fmt(totalContrib + initBal);
+  g('stInterest').textContent = fmt(interest);
+  g('stYears').textContent    = (retAge - currentAge) + ' yrs';
+
+  const feeBand = g('feeBand');
+  if (anyFeeEnabled) {
+    feeBand.classList.add('on');
+    g('stFeeBalance').textContent = fmt(feeBalance);
+    g('stFees').textContent       = feesEnabled ? fmt(totalFees) : '--';
+    g('stDrag').textContent       = fmt(balance - feeBalance);
+  } else {
+    feeBand.classList.remove('on');
+  }
+
+  // Table header
+  const thead = g('schedHead');
+  let headHtml = '<th>Age</th><th>Annual Income</th><th>Monthly Inv.</th><th>Contributed (yr)</th><th>Balance (EOY)</th>';
+  if (feesEnabled)    headHtml += '<th>Annual Fee</th><th>Eff. Rate</th>';
+  if (anyFeeEnabled)  headHtml += '<th>Adj. Balance</th>';
+  thead.innerHTML = headHtml;
+
+  // Table rows
+  const tbody = g('sched');
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    if (r.isOv) tr.classList.add('ovh');
+    let cells = `<td>${r.age}${r.isOv ? '<span class="badge">override</span>' : ''}</td><td>${fmt(r.income)}</td><td>${fmt(r.monthly)}</td><td>${fmt(r.yrContrib)}</td><td class="mc">${fmt(r.balance)}</td>`;
+    if (feesEnabled)   cells += `<td class="fc">${fmt(r.annualFee)}</td><td class="fc">${r.effectiveRate.toFixed(2)}%</td>`;
+    if (anyFeeEnabled) cells += `<td class="ac mc">${fmt(r.feeBalance)}</td>`;
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+
+  // Print summary
+  const parts = [
+    `<strong>Ages ${currentAge} → ${retAge}</strong> &nbsp;(${retAge - currentAge} yrs)`,
+    `&nbsp;&nbsp;Income <strong>${fmt(startIncome)}</strong> @ ${growthPct}%/yr`,
+    `&nbsp;&nbsp;Contribution <strong>${contribPct}%</strong>`,
+    `&nbsp;&nbsp;Return <strong>${returnPct}%</strong>`,
+    `&nbsp;&nbsp;Initial balance <strong>${fmt(initBal)}</strong>`,
+  ];
+  if (overrides.length) {
+    parts.push(`&nbsp;&nbsp;Salary overrides: ${overrides.map(o => `age ${o.age} → ${fmt(o.salary)}`).join(', ')}`);
+  }
+  if (feesEnabled) {
+    const tierStr = feeTiers.map((t, i) => {
+      const prev = i > 0 ? feeTiers[i-1].upTo : 0;
+      return t.upTo === null ? `above ${fmt(prev)} @ ${t.rate}%` : `≤${fmt(t.upTo)} @ ${t.rate}%`;
+    }).join(', ');
+    parts.push(`&nbsp;&nbsp;AUM fee (${billingFreq}): ${tierStr}`);
+  }
+  if (expenseEnabled) {
+    parts.push(`&nbsp;&nbsp;Fund expense ratio (blended): <strong>${blendedExpense.toFixed(3)}%</strong>`);
+  }
+  g('printParams').innerHTML = parts.join('<br>');
+
+  // Chart
+  if (chartInst) chartInst.destroy();
+  const datasets = [
+    { label: 'Balance (gross)', data: balData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+    { label: 'Amount Invested', data: contribData, borderColor: '#3b82f6', backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5, borderDash: [4,3] }
+  ];
+  if (anyFeeEnabled) {
+    datasets.splice(1, 0, {
+      label: 'Balance (after fees)', data: feeBalData,
+      borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)',
+      fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2
+    });
+  }
+
+  chartInst = new Chart(g('chart').getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#4e5666', font: { family: "'IBM Plex Mono'", size: 10 }, boxWidth: 12 } },
+        tooltip: {
+          backgroundColor: '#1a1e25', borderColor: '#2e3542', borderWidth: 1,
+          titleColor: '#8b93a5', bodyColor: '#e8eaf0',
+          titleFont: { family: "'IBM Plex Mono'", size: 10 },
+          bodyFont: { family: "'IBM Plex Mono'", size: 11 },
+          callbacks: { title: i => 'Age ' + i[0].label, label: i => ' ' + i.dataset.label + ': ' + fmt(i.raw) }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#4e5666', font: { family: "'IBM Plex Mono'", size: 10 } }, grid: { color: 'rgba(37,42,51,.6)' }, border: { color: '#252a33' } },
+        y: { ticks: { color: '#4e5666', font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K') }, grid: { color: 'rgba(37,42,51,.6)' }, border: { color: '#252a33' } }
+      }
+    }
+  });
+
+  saveToLocal();
+}
+
+// ── render ───────────────────────────────────────────────
+function renderOverrides() {
+  const list = g('ovList');
+  list.innerHTML = '';
+  overrides.forEach((ov, i) => {
+    const row = document.createElement('div');
+    row.className = 'ovr';
+    row.innerHTML = `
+      <div class="iw"><input type="number" value="${ov.age}" min="1" max="99" placeholder="Age" oninput="overrides[${i}].age=parseInt(this.value)||0;calculate()"></div>
+      <div class="iw"><span class="pfx">$</span><input type="number" value="${ov.salary}" min="0" step="1000" class="pl" placeholder="Salary" oninput="overrides[${i}].salary=parseFloat(this.value)||0;calculate()"></div>
+      <button class="brm" onclick="removeOv(${i})">&#215;</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function renderFeeTiers() {
+  const list = g('tierList');
+  list.innerHTML = '';
+  feeTiers.forEach((tier, i) => {
+    const isLast  = i === feeTiers.length - 1;
+    const prevLim = i > 0 ? feeTiers[i - 1].upTo : 0;
+    const row = document.createElement('div');
+    row.className = 'tier-row';
+    const rateCell  = `<div class="iw"><input type="number" value="${tier.rate}" min="0" max="20" step="0.05" class="pr" oninput="feeTiers[${i}].rate=parseFloat(this.value)||0;calculate()"><span class="sfx">%</span></div>`;
+    const removeBtn = `<button class="brm" onclick="removeTier(${i})" ${feeTiers.length <= 1 ? 'disabled' : ''}>&#215;</button>`;
+    if (isLast) {
+      row.innerHTML = `<div class="tier-fixed">Above ${fmt(prevLim)}</div>${rateCell}${removeBtn}`;
+    } else {
+      row.innerHTML = `<div class="iw"><span class="pfx">$</span><input type="number" value="${tier.upTo}" min="0" step="10000" class="pl" oninput="feeTiers[${i}].upTo=parseFloat(this.value)||0;calculate()"></div>${rateCell}${removeBtn}`;
+    }
+    list.appendChild(row);
+  });
+}
+
+function renderExpenseItems() {
+  const list = g('expList');
+  list.innerHTML = '';
+  expenseItems.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'exp-row';
+    row.innerHTML = `
+      <input type="text" value="${item.name}" placeholder="Fund name" oninput="expenseItems[${i}].name=this.value">
+      <div class="iw"><input type="number" value="${item.alloc}" min="0" max="100" step="1" class="pr" oninput="expenseItems[${i}].alloc=parseFloat(this.value)||0;calculate()"><span class="sfx">%</span></div>
+      <div class="iw"><input type="number" value="${item.expense}" min="0" max="5" step="0.01" class="pr" oninput="expenseItems[${i}].expense=parseFloat(this.value)||0;calculate()"><span class="sfx">%</span></div>
+      <button class="brm" onclick="removeExp(${i})" ${expenseItems.length <= 1 ? 'disabled' : ''}>&#215;</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function removeOv(i)   { overrides.splice(i, 1); renderOverrides(); calculate(); }
+function removeTier(i) { if (feeTiers.length <= 1) return; feeTiers.splice(i, 1); renderFeeTiers(); calculate(); }
+function removeExp(i)  { if (expenseItems.length <= 1) return; expenseItems.splice(i, 1); renderExpenseItems(); calculate(); }
+
+g('addOv').addEventListener('click', () => {
+  overrides.push({ age: (parseInt(g('currentAge').value) || 30) + 5, salary: 100000 });
+  renderOverrides(); calculate();
+});
+g('addTier').addEventListener('click', () => {
+  const limited  = feeTiers.filter(t => t.upTo !== null);
+  const lastLim  = limited.length ? limited[limited.length - 1].upTo : 100000;
+  const lastRate = feeTiers[feeTiers.length - 1].rate;
+  feeTiers.splice(feeTiers.length - 1, 0, { upTo: lastLim * 2, rate: Math.max(0.05, lastRate - 0.1) });
+  renderFeeTiers(); calculate();
+});
+g('addExp').addEventListener('click', () => {
+  expenseItems.push({ name: '', alloc: 0, expense: 0.5 });
+  renderExpenseItems(); calculate();
+});
+
+g('feeToggle').addEventListener('change', function() {
+  feesEnabled = this.checked;
+  g('feeBody').style.display = this.checked ? 'block' : 'none';
+  calculate();
+});
+g('expToggle').addEventListener('change', function() {
+  expenseEnabled = this.checked;
+  g('expBody').style.display = this.checked ? 'block' : 'none';
+  calculate();
+});
+document.querySelectorAll('input[name=billingFreq]').forEach(r => {
+  r.addEventListener('change', function() { billingFreq = this.value; calculate(); });
+});
+['currentAge','retirementAge','currentIncome','incomeGrowth','contribRate','initialBalance','returnRate']
+  .forEach(id => g(id).addEventListener('input', calculate));
+
+// ── share link ───────────────────────────────────────────
+function copyShareLink() {
+  try {
+    const encoded = btoa(JSON.stringify(captureState()));
+    const url = location.href.split('#')[0] + '#s=' + encoded;
+    navigator.clipboard.writeText(url).then(() => {
+      const ind = g('savedInd');
+      ind.textContent = 'link copied';
+      clearTimeout(ind._t);
+      ind._t = setTimeout(() => { ind.textContent = ''; }, 2000);
+    });
+  } catch(e) {}
+}
+
+function loadFromHash() {
+  try {
+    const m = location.hash.match(/^#s=(.+)/);
+    if (!m) return false;
+    applyState(JSON.parse(atob(m[1])));
+    return true;
+  } catch(e) { return false; }
+}
+
+// ── init ─────────────────────────────────────────────────
+const fromHash = loadFromHash();
+if (!fromHash) loadFromLocal();
+renderOverrides();
+renderFeeTiers();
+renderExpenseItems();
+calculate();
+
+// ── service worker ───────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
