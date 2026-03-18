@@ -1,5 +1,5 @@
 const CACHE = 'inv-calc-v1';
-const LOCAL = ['./', './index.html', './icon.svg', './manifest.json'];
+const LOCAL = ['./', './index.html', './icon.svg', './icon-192.png', './icon-512.png', './manifest.json'];
 const CDN   = [
   'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
